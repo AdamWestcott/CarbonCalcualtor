@@ -1,0 +1,117 @@
+﻿@using DataAccess.Data
+@using CSharp.Net5.BlazorIntegrationDemo.Controllers
+@using Radzen
+@using Radzen.Blazor
+@inject StoredItems stored
+@page "/CalculatorResults"
+
+
+
+<br />
+<RadzenCard Style="background-color:chartreuse">
+    <div>
+        <h1 style="text-align:center">Total Carbon Emissions</h1>
+    </div>
+
+    <div>
+
+        <h2 style="text-align:center">@CarbonTotal kgCO2e</h2>
+    </div>
+
+</RadzenCard>
+<br />
+<RadzenCard>
+    <div class="row justify-content-start">
+        <div class="col-sm-3">
+            <h1 style="font-size: 20px; text-align: center; text-wrap:none">Scope 1 Carbon Emissions</h1>
+            <h2 style="text-align: center">@Scope1Total kgCO2e</h2>
+        </div>
+
+        <div class="col-sm-4">
+            <h1 style="font-size: 20px; text-align: center">Scope 2 Carbon Emissions</h1>
+            <h2 style="text-align: center ">@Scope2Total kgCO2e</h2>
+        </div>
+
+        <div class="col-sm-5">
+            <h1 style="font-size: 20px; text-align: center">Scope 3 Carbon Emissions</h1>
+            <h2 style="text-align: center ">@Scope3Total kgCO2e</h2>
+        </div>
+    </div>
+</RadzenCard>
+<br />
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12 col-lg-6 offset-lg-3 my-5">
+            <RadzenChart>
+                <RadzenPieSeries Data="@EmissionChart" Title="Emission Scope" CategoryProperty="Scope" ValueProperty="Amount" />
+            </RadzenChart>
+        </div>
+    </div>
+</div>
+
+@code {
+    double Scope1Total;
+    double Scope2Total;
+    double Scope3Total;
+    double CarbonTotal;
+    List<Emissions> Emissions = new List<Emissions>();
+
+    class DataItem
+    {
+        public string Scope { get; set; }
+        public double Amount { get; set; }
+    }
+
+    List<DataItem> EmissionChart = new List<DataItem>();
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        Emissions = stored.getEmissions();
+
+        foreach (var emission in Emissions)
+        {
+            if (emission.EmissionScope == "Scope 1")
+            {
+                Scope1Total += (emission.EmissionAmount * emission.EmissionMultiplier);
+                Scope1Total = Math.Round(Scope1Total, 2);
+            }
+        }
+
+        foreach (var emission in Emissions)
+        {
+            if (emission.EmissionScope == "Scope 2")
+            {
+                Scope2Total += (emission.EmissionAmount * emission.EmissionMultiplier);
+                Scope2Total = Math.Round(Scope2Total, 2);
+            }
+        }
+
+        foreach (var emission in Emissions)
+        {
+            if (emission.EmissionScope == "Scope 3")
+            {
+                Scope3Total += (emission.EmissionAmount * emission.EmissionMultiplier);
+                Scope3Total = Math.Round(Scope3Total, 2);
+            }
+        }
+
+        DataItem Scope1Data = new DataItem();
+        Scope1Data.Scope = "Scope 1";
+        Scope1Data.Amount = Scope1Total;
+        EmissionChart.Add(Scope1Data);
+
+        DataItem Scope2Data = new DataItem();
+        Scope2Data.Scope = "Scope 2";
+        Scope2Data.Amount = Scope2Total;
+        EmissionChart.Add(Scope2Data);
+
+        DataItem Scope3Data = new DataItem();
+        Scope3Data.Scope = "Scope 3";
+        Scope3Data.Amount = Scope3Total;
+        EmissionChart.Add(Scope3Data);
+
+        CarbonTotal = Scope1Total + Scope2Total + Scope3Total;
+        CarbonTotal = Math.Round(CarbonTotal, 2);
+    }
+}

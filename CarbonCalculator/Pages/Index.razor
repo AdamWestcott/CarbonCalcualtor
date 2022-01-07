@@ -1,0 +1,235 @@
+﻿@using Radzen
+@using Radzen.Blazor
+@using DataAccess.Data
+@using CSharp.Net5.BlazorIntegrationDemo.Controllers
+@inject Business.Repository.IRepository.IEmissionTypeRepository EmissionTypeRepo
+@inject Business.Repository.IRepository.IUnitsOfMeasurementRepository UnitsOfMeasurementRepo
+@inject NavigationManager NavigationManager
+@inject StoredItems stored
+@page "/"
+
+<h1 style="">Carbon Calculator</h1>
+
+@if (HideAddButton == false)
+{
+    <RadzenButton ButtonStyle="ButtonStyle.Success" Click="addNew" Text="Add New"></RadzenButton>
+}
+
+@if (HideType == false)
+{
+    <RadzenCard>
+        <h2>Select Emission Type</h2>
+        <RadzenDropDown @bind-Value="@type" AllowClear="true" TValue="string" Class="w-100"
+                        Data=@EmissionDropDown
+                        Change=@(args => OnEmissionTypeChange(args, "DropDown")) />
+    </RadzenCard>
+
+}
+<br />
+
+@if (HideUnit == false)
+{
+    <RadzenCard>
+        <h2>Select Unit of Measurement</h2>
+        <RadzenDropDown @bind-Value="@unitOfMeasurement" AllowClear="true" TValue="string" Class="w-100"
+                        Data=@UnitOfMeasurementsDropDown
+                        Change=@(args => OnUnitChange(args, "DropDown")) />
+    </RadzenCard>
+}
+
+<br />
+
+@if (HideScope == false)
+{
+    <RadzenCard>
+        <h2>Select Emission Scope</h2>
+        <RadzenDropDown @bind-Value="@scope" AllowClear="true" TValue="string" Class="w-100"
+                        Data=@ScopeTypes
+                        Change=@(args => OnScopeChange(args, "DropDown")) />
+    </RadzenCard>
+}
+
+<br />
+
+@if (HideAmount == false)
+{
+    <RadzenTemplateForm TItem="Model" Data=@model Submit=@AddToTable InvalidSubmit="@InvalidSubmit">
+        <RadzenCard>
+            <h2>Enter Amount of Emission</h2>
+            <RadzenNumeric @bind-Value=@amount Name="Amount" ShowUpDown="false" TValue="double" Class="w-100"></RadzenNumeric>
+            <RadzenRequiredValidator Component="Amount" Text="Amount is required" Style="position: absolute" />
+            <br />
+            <RadzenButton ButtonStyle="ButtonStyle.Success" ButtonType="ButtonType.Submit" Text="Add Item"></RadzenButton>
+        </RadzenCard>
+    </RadzenTemplateForm>
+
+}
+
+@if (HideTable == false)
+{
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Emission Type</th>
+                <th>Unit of Measurement</th>
+                <th>Emission Scope</th>
+                <th>Emission Amount</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emission in Emissions)
+            {
+            <tr>
+                <td>@emission.EmissionType</td>
+                <td>@emission.UnitOfMeasurement</td>
+                <td>@emission.EmissionScope</td>
+                <td>@emission.EmissionAmount</td>
+                <RadzenButton ButtonStyle="ButtonStyle.Success" Click="@(e=> DeleteEmission(emission))" Text="Delete Emission"></RadzenButton>
+            </tr>
+            }
+        </tbody>
+    </table>
+    <br />
+    <RadzenButton ButtonStyle="ButtonStyle.Success" Click="calculateEmissions" Text="Calculate Emissions"></RadzenButton>
+}
+
+@code {
+    class Model
+    {
+        public double amount { get; set; }
+    }
+
+    Model model = new Model();
+
+    List<EmissionTypes> EmissionTypes = new List<EmissionTypes>();
+    List<UnitsOfMeasurement> unitsOfMeasurements = new List<UnitsOfMeasurement>();
+    List<Emissions> Emissions = new List<Emissions>();
+    bool HideAddButton = false;
+    bool HideType = true;
+    bool HideUnit = true;
+    bool HideScope = true;
+    bool HideAmount = true;
+    bool HideTable = true;
+
+    string type = "";
+    string unitOfMeasurement = "";
+    string scope;
+    double amount;
+    double eMultiplier;
+
+    string EmissionID;
+
+    // IEnumerable<string> EmissionTypes = new string[] { "Petrol", "Electricity" };
+    List<string> EmissionDropDown = new List<string>();
+    List<string> UnitOfMeasurementsDropDown = new List<string>();
+    IEnumerable<string> ScopeTypes = new string[] { "Scope 1", "Scope 2", "Scope 3" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        EmissionTypes = EmissionTypeRepo.GetEmissionTypes();
+        foreach (var EmissionType in EmissionTypes)
+        {
+            EmissionDropDown.Add(EmissionType.EmissionType);
+        }
+
+    }
+
+    void OnEmissionTypeChange(object value, string name)
+    {
+        unitsOfMeasurements = UnitsOfMeasurementRepo.GetUnitsOfMeasurements();
+        UnitOfMeasurementsDropDown.Clear();
+        unitOfMeasurement = "";
+        HideScope = true;
+        foreach (var EmissionType in EmissionTypes)
+        {
+            if (EmissionType.EmissionType == value.ToString())
+            {
+                EmissionID = EmissionType.EmissionTypeID;
+            }
+        }
+
+        foreach (var unit in unitsOfMeasurements)
+        {
+            if (unit.EmissionTypeID == EmissionID)
+            {
+                UnitOfMeasurementsDropDown.Add(unit.UnitOfMeasurement);
+            }
+        }
+        var str = value is IEnumerable<object> ? string.Join(", ", (IEnumerable<object>)value) : value;
+        HideUnit = false;
+    }
+
+    void OnUnitChange(object value, string name)
+    {
+        var str = value is IEnumerable<object> ? string.Join(", ", (IEnumerable<object>)value) : value;
+        HideScope = false;
+    }
+
+    void OnScopeChange(object value, string name)
+    {
+        var str = value is IEnumerable<object> ? string.Join(", ", (IEnumerable<object>)value) : value;
+        HideAmount = false;
+    }
+
+    public void addNew()
+    {
+        HideAddButton = true;
+        HideType = false;
+    }
+
+    public void AddToTable()
+    {
+        HideAddButton = false;
+        HideType = true;
+        HideAmount = true;
+        HideUnit = true;
+        HideScope = true;
+        HideTable = false;
+        model = new Model();
+
+        foreach (var unit in unitsOfMeasurements)
+        {
+            if (unit.EmissionTypeID == EmissionID && unit.UnitOfMeasurement == unitOfMeasurement)
+            {
+                eMultiplier = unit.UnitOfMeasurementMultiplier;
+            }
+        }
+
+        Emissions a = new Emissions();
+        a.EmissionType = type;
+        type = "";
+        a.UnitOfMeasurement = unitOfMeasurement;
+        unitOfMeasurement = "";
+        a.EmissionScope = scope;
+        scope = "";
+        a.EmissionAmount = amount;
+        amount = 0;
+        a.EmissionMultiplier = eMultiplier;
+        eMultiplier = 0;
+        Emissions.Add(a);
+        // EmissionDropDown.Clear();
+        UnitOfMeasurementsDropDown.Clear();
+    }
+
+    public void calculateEmissions()
+    {
+        stored.setEmission(Emissions);
+        NavigationManager.NavigateTo("CalculatorResults");
+
+    }
+
+    public void InvalidSubmit()
+    {
+    }
+
+    public void DeleteEmission(Emissions deleted)
+    {
+        Emissions.Remove(deleted);
+        if (!Emissions.Any())
+        {
+            HideTable = true;
+        }
+    }
+
+}
